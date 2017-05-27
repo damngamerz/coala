@@ -241,6 +241,13 @@ def extract_documentation_with_markers(content, docstyle_definition):
 
     line = 0
     column = 0
+
+    #marker_alignment_test is used to differ bertween fancy strings and 
+    #formal docstrings.
+    marker_alignment_test = ((len(content[0])-len(content[0].lstrip())) - 
+                             (len(content[-1])-len(content[-1].lstrip()))
+                            )
+
     while line < len(content):
         line, column, doc = _extract_doc_comment_from_line(
             content,
@@ -249,7 +256,7 @@ def extract_documentation_with_markers(content, docstyle_definition):
             begin_regex,
             marker_dict,
             docstyle_definition)
-        if doc:
+        if doc and marker_alignment_test < 1:
             yield doc
 
 
