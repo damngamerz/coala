@@ -110,82 +110,85 @@ class DocumentationComment:
             section is a named tuple of either ``Description``, ``Parameter``,
             ``ExceptionValue`` or ``ReturnValue``.
         """
-        lines = self.documentation.splitlines(keepends=True)
+        try:
+            lines = self.documentation.splitlines(keepends=True)
 
-        parse_mode = self.Description
+            parse_mode = self.Description
 
-        cur_param = ''
+            cur_param = ''
 
-        desc = ''
-        parsed = []
+            desc = ''
+            parsed = []
 
-        for line in lines:
+            for line in lines:
 
-            stripped_line = line.strip()
+                stripped_line = line.strip()
 
-            if stripped_line.startswith(param_identifiers[0]):
-                parse_mode = self.Parameter
-                # param_offset contains the starting column of param's name.
-                param_offset = line.find(
-                    param_identifiers[0]) + len(param_identifiers[0])
-                # splitted contains the whole line from the param's name,
-                # which in turn is further divided into its name and desc.
-                splitted = line[param_offset:].split(param_identifiers[1], 1)
-                cur_param = splitted[0].strip()
+                if stripped_line.startswith(param_identifiers[0]):
+                    parse_mode = self.Parameter
+                    # param_offset contains the starting column of param's name.
+                    param_offset = line.find(
+                        param_identifiers[0]) + len(param_identifiers[0])
+                    # splitted contains the whole line from the param's name,
+                    # which in turn is further divided into its name and desc.
+                    splitted = line[param_offset:].split(param_identifiers[1], 1)
+                    cur_param = splitted[0].strip()
 
-                param_desc = splitted[1]
-                # parsed section is added to the final list.
-                parsed.append(self.Parameter(name=cur_param, desc=param_desc))
+                    param_desc = splitted[1]
+                    # parsed section is added to the final list.
+                    parsed.append(self.Parameter(name=cur_param, desc=param_desc))
 
-            elif stripped_line.startswith(exception_identifiers[0]):
-                parse_mode = self.ExceptionValue
-                exception_offset = line.find(
-                    exception_identifiers[0]) + len(exception_identifiers[0])
-                splitted = line[exception_offset:].split(
-                    exception_identifiers[1], 1)
-                cur_exception = splitted[0].strip()
+                elif stripped_line.startswith(exception_identifiers[0]):
+                    parse_mode = self.ExceptionValue
+                    exception_offset = line.find(
+                        exception_identifiers[0]) + len(exception_identifiers[0])
+                    splitted = line[exception_offset:].split(
+                        exception_identifiers[1], 1)
+                    cur_exception = splitted[0].strip()
 
-                exception_desc = splitted[1]
-                parsed.append(self.ExceptionValue(
-                    name=cur_exception, desc=exception_desc))
+                    exception_desc = splitted[1]
+                    parsed.append(self.ExceptionValue(
+                        name=cur_exception, desc=exception_desc))
 
-            elif stripped_line.startswith(return_identifiers):
-                parse_mode = self.ReturnValue
-                return_offset = line.find(
-                    return_identifiers) + len(return_identifiers)
-                retval_desc = line[return_offset:]
-                parsed.append(self.ReturnValue(desc=retval_desc))
+                elif stripped_line.startswith(return_identifiers):
+                    parse_mode = self.ReturnValue
+                    return_offset = line.find(
+                        return_identifiers) + len(return_identifiers)
+                    retval_desc = line[return_offset:]
+                    parsed.append(self.ReturnValue(desc=retval_desc))
 
-            # These conditions will take care if the parsed section
-            # descriptions are not on the same line as that of it's
-            # name. Further, adding the parsed section to the final list.
-            elif parse_mode == self.ReturnValue:
-                retval_desc += line
-                parsed.pop()
-                parsed.append(self.ReturnValue(desc=retval_desc))
-
-            elif parse_mode == self.ExceptionValue:
-                exception_desc += line
-                parsed.pop()
-                parsed.append(self.ExceptionValue(
-                    name=cur_exception, desc=exception_desc))
-
-            elif parse_mode == self.Parameter:
-                param_desc += line
-                parsed.pop()
-                parsed.append(self.Parameter(name=cur_param, desc=param_desc))
-
-            else:
-                desc += line
-                # This is inside a try-except for cases where the list
-                # is empty and has nothing to pop.
-                try:
+                # These conditions will take care if the parsed section
+                # descriptions are not on the same line as that of it's
+                # name. Further, adding the parsed section to the final list.
+                elif parse_mode == self.ReturnValue:
+                    retval_desc += line
                     parsed.pop()
-                except IndexError:
-                    pass
-                parsed.append(self.Description(desc=desc))
+                    parsed.append(self.ReturnValue(desc=retval_desc))
 
-        return parsed
+                elif parse_mode == self.ExceptionValue:
+                    exception_desc += line
+                    parsed.pop()
+                    parsed.append(self.ExceptionValue(
+                        name=cur_exception, desc=exception_desc))
+
+                elif parse_mode == self.Parameter:
+                    param_desc += line
+                    parsed.pop()
+                    parsed.append(self.Parameter(name=cur_param, desc=param_desc))
+
+                else:
+                    desc += line
+                    # This is inside a try-except for cases where the list
+                    # is empty and has nothing to pop.
+                    try:
+                        parsed.pop()
+                    except IndexError:
+                        pass
+                    parsed.append(self.Description(desc=desc))
+
+            return parsed
+        except IndexError:
+            return MalformedComment(self.documentation, self.docstyle_definition, self.indent, self.marker, self.position)
 
     @classmethod
     def from_metadata(cls, doccomment, docstyle_definition,
@@ -269,3 +272,12 @@ class DocumentationComment:
                 (assembled +
                  (self.indent if lines[-1][-1] == '\n' else '') +
                  self.marker[2]))
+
+class MalformedComment(DocumentationComment):
+    """
+    The MalformedComment holds information about a malformed comment
+    which breaks the parser.
+    """
+
+    def parse(self):
+        return None

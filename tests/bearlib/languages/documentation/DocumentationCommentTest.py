@@ -4,6 +4,8 @@ from coalib.bearlib.languages.documentation.DocstyleDefinition import (
     DocstyleDefinition)
 from coalib.bearlib.languages.documentation.DocumentationComment import (
     DocumentationComment)
+from coalib.bearlib.languages.documentation.DocumentationComment import (
+    MalformedComment)
 from coalib.bearlib.languages.documentation.DocumentationExtraction import (
     extract_documentation)
 from tests.bearlib.languages.documentation.TestUtils import (
@@ -213,6 +215,17 @@ class PythonDocumentationCommentTest(DocumentationCommentTest):
                    ]
 
         self.assertEqual(parsed_docs, expected)
+
+    def test_MalformedComment(self):
+        data = ' :param xyz missing colon'
+
+        python_default = DocstyleDefinition.load('python', 'default')
+        doc_comment = DocumentationComment(data, python_default,
+                                           None, None, None)
+        parsed_metadata = doc_comment.parse()
+        self.assertEqual(parsed_metadata, MalformedComment(data, python_default,
+                                                           None, None, None))
+
 
 
 class JavaDocumentationCommentTest(DocumentationCommentTest):
